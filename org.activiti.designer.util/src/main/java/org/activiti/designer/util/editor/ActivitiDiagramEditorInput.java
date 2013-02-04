@@ -1,4 +1,4 @@
-package org.activiti.designer.eclipse.editor;
+package org.activiti.designer.util.editor;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.emf.common.util.URI;

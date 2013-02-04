@@ -11,13 +11,15 @@ import org.activiti.designer.Activator;
 import org.activiti.designer.PluginImage;
 import org.activiti.designer.eclipse.common.ActivitiPlugin;
 import org.activiti.designer.util.ActivitiConstants;
-import org.activiti.designer.util.dialog.ActivitiResourceSelectionDialog;
 import org.activiti.designer.util.eclipse.ActivitiUiUtil;
 import org.activiti.designer.util.property.ActivitiPropertySection;
 import org.activiti.designer.util.workspace.ActivitiWorkspaceUtil;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.emf.transaction.TransactionalEditingDomain;
@@ -42,6 +44,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.dialogs.FilteredResourcesSelectionDialog;
 import org.eclipse.ui.dialogs.TwoPaneElementSelector;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
@@ -234,6 +237,64 @@ public class PropertyCallActivitySection extends ActivitiPropertySection
   };
 
   /**
+   * A dialog to show all filtered resources that contain the process ID that is ambiguous.
+   */
+  private static class FilteredDiagramDataFileDialog extends FilteredResourcesSelectionDialog
+  {
+    private final Set<IFile> allowedResources;
+
+    public FilteredDiagramDataFileDialog(final Set<IFile> allowedResources) {
+      super(Display.getCurrent().getActiveShell()
+              , false, ResourcesPlugin.getWorkspace().getRoot()
+              , IResource.FILE | IResource.FOLDER | IResource.PROJECT);
+
+      this.allowedResources = allowedResources;
+    }
+
+    @Override
+    protected ItemsFilter createFilter() {
+      return new DiagramDataFileFilter();
+    }
+
+    private class DiagramDataFileFilter extends ResourceFilter {
+
+      @Override
+      public boolean matchItem(Object item) {
+        final IResource resource = (IResource) item;
+
+        return super.matchItem(item) && select(resource);
+      }
+
+      private boolean select(final IResource resource) {
+        final IProject project = resource.getProject();
+        try {
+          if (project.getNature(ActivitiConstants.NATURE_ID) != null) {
+            return allowedResources.contains(resource);
+          }
+        } catch (CoreException exception) {
+          // do nothing
+        }
+
+        return true;
+      }
+
+      @Override
+      public boolean equalsFilter(ItemsFilter iFilter) {
+        if (!super.equalsFilter(iFilter)) {
+          return false;
+        }
+
+        if (!(iFilter instanceof DiagramDataFileFilter)) {
+          return false;
+        }
+
+        return true;
+      }
+
+    }
+  }
+
+  /**
    * This listener is called in case the user clicks the button to open the selected process
    * model.
    */
@@ -250,13 +311,12 @@ public class PropertyCallActivitySection extends ActivitiPropertySection
         // open diagram
         openDiagramForBpmnFile(resources.iterator().next());
       } else if (resources.size() > 1) {
-        final ActivitiResourceSelectionDialog dialog = new ActivitiResourceSelectionDialog(
-                Display.getCurrent().getActiveShell(), resources.toArray(new IResource[] {}));
+        final FilteredDiagramDataFileDialog dialog = new FilteredDiagramDataFileDialog(resources);
 
+        dialog.setInitialPattern("?");
         dialog.setTitle("Multiple Processes Found");
         dialog.setMessage("Select a Process Model to use (* = any string, ? = any char):");
         dialog.setBlockOnOpen(true);
-        dialog.setInitialPattern("*");
 
         if (dialog.open() == Window.OK) {
           final Object[] result = dialog.getResult();

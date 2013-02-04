@@ -533,7 +533,7 @@ public class ActivitiToolBehaviorProvider extends DefaultToolBehaviorProvider {
                   && ActivitiWorkspaceUtil.getDiagramDataFilesByProcessId(calledElement).size() == 1) {
             final ContextMenuEntry openCalledElement
               = new ContextMenuEntry(new OpenCalledElementForCallActivity(getFeatureProvider()), context);
-            openCalledElement.setText("Open Process '" + calledElement + "' in new diagram");
+            openCalledElement.setText("Open Process '" + calledElement + "' in new Diagram");
             openCalledElement.setSubmenu(false);
             menuList.add(openCalledElement);
           }

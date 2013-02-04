@@ -1,4 +1,4 @@
-package org.activiti.designer.eclipse.util;
+package org.activiti.designer.util.editor;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -13,8 +13,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.activiti.designer.eclipse.editor.ActivitiDiagramEditor;
-import org.activiti.designer.eclipse.editor.ActivitiDiagramEditorInput;
 import org.activiti.designer.util.ActivitiConstants;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -39,14 +37,15 @@ import org.eclipse.emf.transaction.TransactionalEditingDomain;
 import org.eclipse.emf.transaction.impl.TransactionalEditingDomainImpl;
 import org.eclipse.emf.transaction.util.TransactionUtil;
 import org.eclipse.graphiti.mm.pictograms.Diagram;
+import org.eclipse.graphiti.platform.IDiagramEditor;
 import org.eclipse.graphiti.ui.editor.DiagramEditorInput;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.part.FileEditorInput;
 
-public class FileService {
+public final class DiagramUtils {
 
-   /**
+  /**
    * Returns a temporary file used as diagram file. Conceptually, this is a placeholder used by
    * Graphiti as editor input file. The real data file is found at the given data file path.
    *
@@ -228,149 +227,172 @@ public class FileService {
     return null;
   }
 
+  /**
+   * Creates a transactional domain for the given diagram resource and diagram, shown in the given
+   * editor. In case no diagram and editor is present, an input stream and a proper data file can
+   * be given instead.
+   *
+   * <p>The transactional domain is linked to the diagram resource after creating it</p>
+   *
+   * @param diagramResourceUri the resource URI to bind
+   * @param diagram the diagram to use, if <code>null</code>, a content stream and a resource file
+   *     needs to be specified.
+   * @param diagramEditor the editor to link to
+   * @param contentStream a content stream, necessary if the diagram is not given (cause it might
+   *     not exist yet (e.g. for wizards)
+   * @param resourceFile the resource file that belongs to the content stream. Only relevant in case
+   *     no diagram has been given.
+   */
+  public static <D extends IDiagramEditor>
+    TransactionalEditingDomain createAndLinkTransactionalEditingDomain(final URI diagramResourceUri
+                                                               , final Diagram diagram
+                                                               , final D diagramEditor
+                                                               , final InputStream contentStream
+                                                               , final IFile resourceFile) {
 
+    TransactionalEditingDomain editingDomain = null;
+    ResourceSet resourceSet = null;
 
-	public static TransactionalEditingDomain createEmfFileForDiagram(final URI diagramResourceUri
-	                                                               , final Diagram diagram
-	                                                               , final ActivitiDiagramEditor diagramEditor
-	                                                               , final InputStream contentStream
-	                                                               , final IFile resourceFile) {
+    if (diagramEditor == null || diagramEditor.getResourceSet() == null
+            || diagramEditor.getEditingDomain() == null) {
+      // nothing found, create a new one
+      resourceSet = new ResourceSetImpl();
 
-		TransactionalEditingDomain editingDomain = null;
-		ResourceSet resourceSet = null;
+      // try to retrieve an editing domain for this resource set
+      editingDomain = TransactionUtil.getEditingDomain(resourceSet);
 
-		if (diagramEditor == null || diagramEditor.getResourceSet() == null || diagramEditor.getEditingDomain() == null) {
-		  // nothing found, create a new one
-		  resourceSet = new ResourceSetImpl();
+      if (editingDomain == null) {
+        // not existing yet, create a new one
+        editingDomain = TransactionalEditingDomain.Factory.INSTANCE.createEditingDomain(resourceSet);
+      }
+    } else {
+      editingDomain = diagramEditor.getEditingDomain();
+      resourceSet = diagramEditor.getResourceSet();
+    }
 
-		  // try to retrieve an editing domain for this resource set
-		  editingDomain = TransactionUtil.getEditingDomain(resourceSet);
+    // Create a resource for this file.
+    final Resource resource = resourceSet.createResource(diagramResourceUri);
+    final CommandStack commandStack = editingDomain.getCommandStack();
+    commandStack.execute(new RecordingCommand(editingDomain) {
 
-		  if (editingDomain == null) {
-		    // not existing yet, create a new one
-		    editingDomain = TransactionalEditingDomain.Factory.INSTANCE.createEditingDomain(resourceSet);
-		  }
-		} else {
-		  editingDomain = diagramEditor.getEditingDomain();
-		  resourceSet = diagramEditor.getResourceSet();
-		}
+      @Override
+      protected void doExecute() {
+        resource.setTrackingModification(true);
 
-		// Create a resource for this file.
-		final Resource resource = resourceSet.createResource(diagramResourceUri);
-		final CommandStack commandStack = editingDomain.getCommandStack();
-		commandStack.execute(new RecordingCommand(editingDomain) {
+        if (contentStream == null || resourceFile == null) {
+          resource.getContents().add(diagram);
+        } else {
+          try {
+            resourceFile.create(contentStream, true, null);
+          } catch (CoreException exception) {
+            exception.printStackTrace();
+          }
+        }
 
-			@Override
-			protected void doExecute() {
-				resource.setTrackingModification(true);
+      }
+    });
 
-				if (contentStream == null || resourceFile == null) {
-	        resource.getContents().add(diagram);
-				} else {
-				  try {
-				    resourceFile.create(contentStream, true, null);
-				  } catch (CoreException exception) {
-				    exception.printStackTrace();
-				  }
-				}
+    save(editingDomain);
 
-			}
-		});
+    return editingDomain;
+  }
 
-		save(editingDomain, Collections.<Resource, Map<?, ?>> emptyMap());
-		return editingDomain;
-	}
+  private static void save(final TransactionalEditingDomain editingDomain) {
 
-	private static void save(TransactionalEditingDomain editingDomain, Map<Resource, Map<?, ?>> options) {
-		saveInWorkspaceRunnable(editingDomain, options);
-	}
+    final Map<URI, Throwable> failedSaves = new HashMap<URI, Throwable>();
+    final IWorkspaceRunnable wsRunnable = new IWorkspaceRunnable() {
 
-	private static void saveInWorkspaceRunnable(final TransactionalEditingDomain editingDomain,
-			final Map<Resource, Map<?, ?>> options) {
+      @Override
+      public void run(final IProgressMonitor monitor) throws CoreException {
 
-		final Map<URI, Throwable> failedSaves = new HashMap<URI, Throwable>();
-		final IWorkspaceRunnable wsRunnable = new IWorkspaceRunnable() {
-			@Override
-			public void run(final IProgressMonitor monitor) throws CoreException {
+        final Runnable runnable = new Runnable() {
 
-				final Runnable runnable = new Runnable() {
+          @Override
+          public void run() {
+            if (editingDomain != null) {
+              final TransactionalEditingDomainImpl tedImpl
+                = (TransactionalEditingDomainImpl) editingDomain;
 
-					@Override
-					public void run() {
-						Transaction parentTx;
-						if (editingDomain != null
-								&& (parentTx = ((TransactionalEditingDomainImpl) editingDomain).getActiveTransaction()) != null) {
-							do {
-								if (!parentTx.isReadOnly()) {
-									throw new IllegalStateException(
-											"FileService.save() called from within a command (likely produces a deadlock)"); //$NON-NLS-1$
-								}
-							} while ((parentTx = ((TransactionalEditingDomainImpl) editingDomain)
-									.getActiveTransaction().getParent()) != null);
-						}
+              Transaction parentTx = tedImpl.getActiveTransaction();
+              if (parentTx != null) {
+                do {
+                  if (!parentTx.isReadOnly()) {
+                    throw new IllegalStateException("DiagramUtils:save() called from within a command (likely produces a deadlock)");
+                  }
 
-						final EList<Resource> resources = editingDomain.getResourceSet().getResources();
-						// Copy list to an array to prevent
-						// ConcurrentModificationExceptions
-						// during the saving of the dirty resources
-						Resource[] resourcesArray = new Resource[resources.size()];
-						resourcesArray = resources.toArray(resourcesArray);
-						final Set<Resource> savedResources = new HashSet<Resource>();
-						for (final Resource resource : resourcesArray) {
-							if (resource.isModified()) {
-								try {
-									resource.save(options.get(resource));
-									savedResources.add(resource);
-								} catch (final Throwable t) {
-									failedSaves.put(resource.getURI(), t);
-								}
-							}
-						}
-					}
-				};
+                  parentTx = parentTx.getParent();
+                } while (parentTx != null);
+              }
+            }
 
-				try {
-					editingDomain.runExclusive(runnable);
-				} catch (final InterruptedException e) {
-					throw new RuntimeException(e);
-				}
-				editingDomain.getCommandStack().flush();
-			}
-		};
-		try {
-			ResourcesPlugin.getWorkspace().run(wsRunnable, null);
-			if (!failedSaves.isEmpty()) {
-				throw new WrappedException(createMessage(failedSaves), new RuntimeException());
-			}
-		} catch (final CoreException e) {
-			final Throwable cause = e.getStatus().getException();
-			if (cause instanceof RuntimeException) {
-				throw (RuntimeException) cause;
-			}
-			throw new RuntimeException(e);
-		}
-	}
+            final EList<Resource> resources = editingDomain.getResourceSet().getResources();
 
-	private static String createMessage(Map<URI, Throwable> failedSaves) {
-		final StringBuilder buf = new StringBuilder("The following resources could not be saved:");
-		for (final Entry<URI, Throwable> entry : failedSaves.entrySet()) {
-			buf.append("\nURI: ").append(entry.getKey().toString()).append(", cause: \n")
-					.append(getExceptionAsString(entry.getValue()));
-		}
-		return buf.toString();
-	}
+            // Copy list to an array to prevent ConcurrentModificationExceptions during the saving
+            // of the dirty resources
+            Resource[] resourcesArray = new Resource[resources.size()];
+            resourcesArray = resources.toArray(resourcesArray);
+            final Set<Resource> savedResources = new HashSet<Resource>();
 
-	private static String getExceptionAsString(Throwable t) {
-		final StringWriter stringWriter = new StringWriter();
-		final PrintWriter printWriter = new PrintWriter(stringWriter);
-		t.printStackTrace(printWriter);
-		final String result = stringWriter.toString();
-		try {
-			stringWriter.close();
-		} catch (final IOException e) {
-			// $JL-EXC$ ignore
-		}
-		printWriter.close();
-		return result;
-	}
+            for (final Resource resource : resourcesArray) {
+
+              if (resource.isModified()) {
+                try {
+                  resource.save(Collections.emptyMap());
+                  savedResources.add(resource);
+                } catch (final Throwable t) {
+                  failedSaves.put(resource.getURI(), t);
+                }
+              }
+            }
+          }
+        };
+
+        try {
+          editingDomain.runExclusive(runnable);
+        } catch (final InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        editingDomain.getCommandStack().flush();
+      }
+    };
+
+    try {
+      ResourcesPlugin.getWorkspace().run(wsRunnable, null);
+      if (!failedSaves.isEmpty()) {
+        throw new WrappedException(createMessage(failedSaves), new RuntimeException());
+      }
+    } catch (final CoreException e) {
+      final Throwable cause = e.getStatus().getException();
+      if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      }
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static String createMessage(Map<URI, Throwable> failedSaves) {
+    final StringBuilder buf = new StringBuilder("The following resources could not be saved:");
+    for (final Entry<URI, Throwable> entry : failedSaves.entrySet()) {
+      buf.append("\nURI: ").append(entry.getKey().toString()).append(", cause: \n").append(getExceptionAsString(entry.getValue()));
+    }
+    return buf.toString();
+  }
+
+  private static String getExceptionAsString(Throwable t) {
+    final StringWriter stringWriter = new StringWriter();
+    final PrintWriter printWriter = new PrintWriter(stringWriter);
+    t.printStackTrace(printWriter);
+    final String result = stringWriter.toString();
+    try {
+      stringWriter.close();
+    } catch (final IOException e) {
+      // $JL-EXC$ ignore
+    }
+    printWriter.close();
+    return result;
+  }
+
+  private DiagramUtils() {
+    super();
+  }
 }

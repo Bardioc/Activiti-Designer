@@ -1,6 +1,6 @@
 package org.activiti.designer.eclipse.editor;
 
-import org.activiti.designer.eclipse.util.FileService;
+import org.activiti.designer.util.editor.DiagramUtils;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.graphiti.ui.editor.DiagramEditorMatchingStrategy;
 import org.eclipse.ui.IEditorInput;
@@ -14,8 +14,8 @@ public class ActivitiDiagramMatchingStrategy implements IEditorMatchingStrategy 
   public boolean matches(final IEditorReference editorRef, final IEditorInput input) {
 
 	  try {
-  	  final IFile newDataFile = FileService.getDataFileForInput(input);
-  	  final IFile openEditorDataFile = FileService.getDataFileForInput(editorRef.getEditorInput());
+  	  final IFile newDataFile = DiagramUtils.getDataFileForInput(input);
+  	  final IFile openEditorDataFile = DiagramUtils.getDataFileForInput(editorRef.getEditorInput());
 
   	  if (newDataFile.equals(openEditorDataFile)) {
   	    return true;

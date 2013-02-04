@@ -33,10 +33,11 @@ import org.activiti.bpmn.model.ServiceTask;
 import org.activiti.bpmn.model.SubProcess;
 import org.activiti.designer.eclipse.preferences.PreferencesUtil;
 import org.activiti.designer.eclipse.ui.ActivitiEditorContextMenuProvider;
-import org.activiti.designer.eclipse.util.FileService;
 import org.activiti.designer.integration.servicetask.CustomServiceTask;
 import org.activiti.designer.util.eclipse.ActivitiUiUtil;
+import org.activiti.designer.util.editor.ActivitiDiagramEditorInput;
 import org.activiti.designer.util.editor.Bpmn2MemoryModel;
+import org.activiti.designer.util.editor.DiagramUtils;
 import org.activiti.designer.util.editor.ModelHandler;
 import org.activiti.designer.util.extension.ExtensionUtil;
 import org.activiti.designer.util.preferences.Preferences;
@@ -134,16 +135,16 @@ public class ActivitiDiagramEditor extends DiagramEditor {
   private ActivitiDiagramEditorInput createNewDiagramEditorInput(final IEditorInput input)
           throws CoreException {
 
-    final IFile dataFile = FileService.getDataFileForInput(input);
+    final IFile dataFile = DiagramUtils.getDataFileForInput(input);
 
     // now generate the temporary diagram file
     final IPath dataFilePath = dataFile.getFullPath();
 
     // get or create the corresponding temporary folder
-    final IFolder tempFolder = FileService.getOrCreateTempFolder(dataFilePath);
+    final IFolder tempFolder = DiagramUtils.getOrCreateTempFolder(dataFilePath);
 
     // finally get the diagram file that corresponds to the data file
-    final IFile diagramFile = FileService.getTemporaryDiagramFile(dataFilePath, tempFolder);
+    final IFile diagramFile = DiagramUtils.getTemporaryDiagramFile(dataFilePath, tempFolder);
 
     // Create new temporary diagram file
     Bpmn2DiagramCreator creator = new Bpmn2DiagramCreator();

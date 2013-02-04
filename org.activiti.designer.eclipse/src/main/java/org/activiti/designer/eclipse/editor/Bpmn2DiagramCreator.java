@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.activiti.designer.eclipse.util.FileService;
 import org.activiti.designer.util.ActivitiConstants;
+import org.activiti.designer.util.editor.ActivitiDiagramEditorInput;
+import org.activiti.designer.util.editor.DiagramUtils;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -45,7 +46,7 @@ public class Bpmn2DiagramCreator {
 	    final InputStream is
 	      = Thread.currentThread().getContextClassLoader().getResourceAsStream(templateContent);
 
-	    finalDataFile = FileService.recreateDataFile(new Path(uri.trimFragment().toPlatformString(true)));
+	    finalDataFile = DiagramUtils.recreateDataFile(new Path(uri.trimFragment().toPlatformString(true)));
 
 	    final String filePath = finalDataFile.getLocationURI().getRawPath().replaceAll("%20", " ");
 
@@ -85,7 +86,7 @@ public class Bpmn2DiagramCreator {
 	  final Diagram diagram
 	    = Graphiti.getPeCreateService().createDiagram("BPMNdiagram", diagramName, true);
 
-	  FileService.createEmfFileForDiagram(uri, diagram, diagramEditor, null, null);
+	  DiagramUtils.createAndLinkTransactionalEditingDomain(uri, diagram, diagramEditor, null, null);
 
 	  final String providerId
 	    = GraphitiUi.getExtensionManager().getDiagramTypeProviderId(diagram.getDiagramTypeId());

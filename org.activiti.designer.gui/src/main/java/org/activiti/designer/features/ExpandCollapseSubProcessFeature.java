@@ -7,9 +7,9 @@ import java.util.Collection;
 import org.activiti.bpmn.model.SubProcess;
 import org.activiti.designer.eclipse.editor.ActivitiDiagramEditor;
 import org.activiti.designer.eclipse.preferences.PreferencesUtil;
-import org.activiti.designer.eclipse.util.FileService;
 import org.activiti.designer.eclipse.util.Util;
 import org.activiti.designer.util.eclipse.ActivitiUiUtil;
+import org.activiti.designer.util.editor.DiagramUtils;
 import org.activiti.designer.util.preferences.Preferences;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -119,12 +119,12 @@ public class ExpandCollapseSubProcessFeature extends AbstractDrillDownFeature {
 		if (createContent) {
 			final InputStream contentStream = Util.getContentStream(Util.Content.NEW_SUBPROCESS_CONTENT);
 			InputStream replacedStream = Util.swapStreamContents(subprocessName, contentStream);
-			domain = FileService.createEmfFileForDiagram(uri, null, diagramEditor, replacedStream, targetFile);
+			domain = DiagramUtils.createAndLinkTransactionalEditingDomain(uri, null, diagramEditor, replacedStream, targetFile);
 			diagram = org.eclipse.graphiti.ui.internal.services.GraphitiUiInternal.getEmfService().getDiagramFromFile(
 					targetFile, domain.getResourceSet());
 		} else {
 			diagram = Graphiti.getPeCreateService().createDiagram("BPMNdiagram", subprocessName, true);
-			domain = FileService.createEmfFileForDiagram(uri, diagram, diagramEditor, null, null);
+			domain = DiagramUtils.createAndLinkTransactionalEditingDomain(uri, diagram, diagramEditor, null, null);
 		}
 
 		return diagram;
