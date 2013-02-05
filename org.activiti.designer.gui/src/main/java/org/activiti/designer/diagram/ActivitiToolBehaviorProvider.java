@@ -78,6 +78,7 @@ import org.activiti.designer.features.DeleteAssociationFeature;
 import org.activiti.designer.features.DeletePoolFeature;
 import org.activiti.designer.features.DeleteSequenceFlowFeature;
 import org.activiti.designer.features.contextmenu.OpenCalledElementForCallActivity;
+import org.activiti.designer.features.subprocess.CollapseSubProcessFeature;
 import org.activiti.designer.integration.palette.PaletteEntry;
 import org.activiti.designer.util.ActivitiConstants;
 import org.activiti.designer.util.eclipse.ActivitiUiUtil;
@@ -195,6 +196,18 @@ public class ActivitiToolBehaviorProvider extends DefaultToolBehaviorProvider {
 
     Object bo = getFeatureProvider().getBusinessObjectForPictogramElement(pe);
 
+    if (bo instanceof SubProcess) {
+      CustomContext subProcessCollapseExpandContext = new CustomContext();
+      subProcessCollapseExpandContext.putProperty("org.activiti.designer.subprocess.collapseExpand", pe);
+
+      ContextButtonEntry collapseButton
+        = new ContextButtonEntry(new CollapseSubProcessFeature(getFeatureProvider()), subProcessCollapseExpandContext);
+      collapseButton.setText("Collapse");
+      collapseButton.setIconId(PluginImage.IMG_COLLAPSE.getImageKey());
+
+      data.getDomainSpecificContextButtons().add(collapseButton);
+    }
+
     CreateConnectionContext connectionContext = new CreateConnectionContext();
     connectionContext.setSourcePictogramElement(pe);
     Anchor connectionAnchor = null;
@@ -260,6 +273,8 @@ public class ActivitiToolBehaviorProvider extends DefaultToolBehaviorProvider {
     if (button.getDragAndDropFeatures().size() > 0) {
       data.getDomainSpecificContextButtons().add(button);
     }
+
+
 
     if (bo instanceof StartEvent || bo instanceof Task || bo instanceof CallActivity || bo instanceof Gateway) {
 

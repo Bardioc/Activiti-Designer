@@ -1,9 +1,9 @@
 /* Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,19 +15,19 @@ package org.activiti.designer;
 
 /**
  * Images in the GUI plugin.
- * 
+ *
  * @author Tiese Barrell
  * @since 0.6.1
  * @version 3
  */
 public enum PluginImage {
 
-  ACTION_UP("action.up", "action.up.png"), //$NON-NLS-1$ 
-  ACTION_DOWN("action.down", "action.down.png"), //$NON-NLS-1$ 
+  ACTION_UP("action.up", "action.up.png"), //$NON-NLS-1$
+  ACTION_DOWN("action.down", "action.down.png"), //$NON-NLS-1$
   ACTION_GO("action.go", "bullet_go.png"), //$NON-NLS-1$
 
   // The image identifier for an EReference.
-  IMG_EREFERENCE("ereference", "ereference.gif"), //$NON-NLS-1$ 
+  IMG_EREFERENCE("ereference", "ereference.gif"), //$NON-NLS-1$
 
   // Event image icons
   IMG_STARTEVENT_NONE("startevent.none", "type.startevent.none.png"), //$NON-NLS-1$
@@ -70,7 +70,7 @@ public enum PluginImage {
 
   IMG_THROW_SIGNAL("throw.signal", "throw.signal.png"), //$NON-NLS-1$
   IMG_THROW_NONE("throw.none", "throw.none.png"), //$NON-NLS-1$
-  
+
   IMG_TEXT_ANNOTATION("textannotation", "textannotation.png"),
   IMG_ASSOCIATION("association", "association.png"),
 
@@ -79,6 +79,7 @@ public enum PluginImage {
   EDIT_ICON("edit.icon", "edit.png"), //$NON-NLS-1$
   NEW_ICON("new.icon", "new.png"), //$NON-NLS-1$
 
+  IMG_COLLAPSE("collapse", "collapse.png")
   ;
 
   private static final String KEY_PREFIX = Activator.PLUGIN_ID;
